@@ -31,9 +31,11 @@ Source code for implementing C+GDROM framework:
 - `General_Model_demo.ipynb`: walk-through example for *General Model* implementation with default module parameters.
 - `Flood_Control_Model_demo.ipynb` & `Irrigation_Model_demo.ipynb` : walk-through example for model implementation based on pre-calibrated module parameters, and model calibration procedure using 2-year operation data.
 
-`README.md`: Project description and setup guide
+### `README.md`
+Project description and setup guide
 
-`LICENSE`: License file 
+### `LICENSE` 
+License file 
 
 
 ## How to Run the C+GDROM *General Model*
@@ -45,12 +47,14 @@ This section provides a step-by-step guide to applying the C+GDROM *General Mode
 To run the model, the following reservoir data information is required:
 
 **1. Inflow statistics**
+
 Daily inflow statistics, including:
-- the 99th, 80th, 50th, 30th, 10th (*I99, I80, I50, I30, I10*), and mean of daily inflow values (*I_mean*)
+- the 99th, 80th, 50th, 30th, 10th (*I99, I80, I50, I30, I10*), and mean of daily inflow values ($I_{mean}$)
 
 These statistics may be computed from observed inflow records, or streamflow simulations from hydrological models.
 
 **2. Storage capacity information**
+
 Required parameters:
 - Total capacity (*S_cap*)
 - Dead storage (*S_dead*)
@@ -62,25 +66,29 @@ If unavailable, approximate values may be used:
 - *S_flood_cap ≈ 0.99 × S_cap*  
 
 **3. Storage data**
+
 Historical in-situ or remotely sensed storage data for deriving the conceptual storage curve.
 
 **4. Inflow time series**
+
 Daily inflow and date for the simulation period.
 
-Note: `metadata_256reservoirs.csv` includes the statistics of reservoir inflows, and information of storage capacity for the 256 reservoirs covered in the paper. For some reservoirs, there exist negative inflow statistics (10th and 30th inflows, referred to as I10 and I30 in the csv file). This is because these statistics were obtained based on the series of *net* inflow to reservoirs (computed using daily water balance; detailed in Chen et al., 2025), which may be negative due to large evaporation loss in dry season. Errors in release or storage observations may also cause such issues in net inflow series. When negative inflow statistics are used as recommended release decisions, we adjust the release to zero. In addition, since all the studied reservoirs have long-term operation records (≥25 years), this study retrieved the storage capacity features from historical data for simplicity and reliability. Specifically, historical maximum and minimum storage values are used to approximate total storage capacity (*S_cap*) and dead storage capacity (*S_dead*), respectively.
+Note: `metadata_256reservoirs.csv` includes the statistics of reservoir inflows, and information of storage capacity for the 256 reservoirs covered in the paper. For some reservoirs, there exist negative inflow statistics (e.g., *I10, I30*). This is because these statistics were obtained based on the series of *net* inflow to reservoirs (computed using daily water balance; detailed in Chen et al., 2025), which may be negative due to large evaporation loss in dry season. Errors in release or storage observations may also cause such issues in net inflow series. When negative inflow statistics are used as recommended release decisions, we adjust the release to zero. In addition, since all the studied reservoirs have long-term operation records (≥25 years), this study retrieved the storage capacity features from historical data for simplicity and reliability. Specifically, historical maximum and minimum storage values are used to approximate total storage capacity (*S_cap*) and dead storage capacity (*S_dead*), respectively.
 
 
 ### Step 2: Derive conceptual-storage-cruve parameters
 
-Reservoir-specific conceptual storage regulation curve is required input for C+GDROM, which is parameterized using six parameters: $A1$-$A4$ (timing parameters) and ${S_{A4-A1}$ & ${S_{A2-A3}$ (representative storage levels of transition stages). `conceptual_s_curve.py` defines a function `derive_curve_parameters()` to derive these parameters for individual reservoirs. `conceptual_s_curve.py` provides another function `doy_typical_storage()`, which returns the typical storage levels for each day-of-year (DOY) based on the pre-derived storage curve parameters for C+GDROM implementation.
+Reservoir-specific conceptual storage regulation curve is required input for C+GDROM, which is parameterized using six parameters: *A1*-*A4* (timing parameters), $S_{A4-A1}$ and $S_{A2-A3}$ (representative storage levels of transition stages). `conceptual_s_curve.py` defines a function `derive_curve_parameters()` to derive these parameters for individual reservoirs. `conceptual_s_curve.py` provides another function `doy_typical_storage()`, which returns the typical storage levels for each day-of-year (DOY) based on the pre-derived storage curve parameters for C+GDROM implementation.
 
 Based on historical storage data (observed or RS-derived), users can compute daily median storage for each DOY, which serves as the input (series length=365) to the function `derive_curve_parameters()`. To better accommodate the temporal resolution of RS storage estimates, function `derive_curve_parameters()` also takes the series of monthly characteristic storage levels (series length=12, representing January to December) as input. Users need to process RS storage data on their own and only provide monthly median values (or other monthly representative values).
 
 After obtaining these curve parameters, reservoir size ratio, an important reservoir feature used in C+GDROM, can be computed using:
-$$size ratio = S_cap-min\{S_{A4-A1}, S_{A2-A3}\} / I_mean*365$$ 
-where *I_mean* represents multi-year average daily inflow volume.
 
-Notably, when the relative difference between ${S_{A4-A1}$ and ${S_{A2-A3}$ is less than 10%, seasonal storage variation is considered negligible, and a single constant value (i.e., median storage) is used as the characteristic storage level throughout the year (with curve shape noted as 'single'). 
+$$size\ ratio = {S_{cap}-\min(S_{A4-A1}, S_{A2-A3}) \over I_{mean}*365}$$ 
+
+where $I_{mean}$ represents multi-year average daily inflow volume.
+
+Notably, when the relative difference between $S_{A4-A1}$ and $S_{A2-A3}$ is less than 10%, seasonal storage variation is considered negligible, and a single constant value (i.e., median storage) is used as the characteristic storage level throughout the year (with curve shape noted as 'single'). 
 
 The derived conceptual-storage-curve parameters for 256 studied reservoirs are provided in `metadata_256reservoirs.csv` for demonstration. Users may follow the steps in `Conceptual_S_curve.ipynb` to derive curve parameters for their reservoirs.
 
@@ -89,9 +97,9 @@ The derived conceptual-storage-curve parameters for 256 studied reservoirs are p
 Given basic reservoir features and pre-derived conceptual-storage-curve parameters (all saved in `metadata_256reservoirs.csv`), C+GDROM *General Model* can be easily implemented following the steps in the notebook `General_Model_demo.ipynb`.
 
 Core functions of *General Model* are defined in the script `cgdrom_general.py`, including:
-* general_default_parameters(): returning the default release module parameters in *General Model* based on inflow statistics and reservoir size ratio
-* predict_general_daily(): returning the predicted release decision and end-of-day storage using *General Model* for a day
-* predict_general_series(): returning the predicted release and storage series using *General Model* for multiple days (given inflow series of studied period)
+* `general_default_parameters()`: returning the default release module parameters in *General Model* based on inflow statistics and reservoir size ratio
+* `predict_general_daily()`: returning the predicted release decision and end-of-day storage using *General Model* for a day
+* `predict_general_series()`: returning the predicted release and storage series using *General Model* for multiple days (given inflow series of studied period)
 
 Details of the parameters for each function can be found in the notebook `General_Model_demo.ipynb` and source code `cgdrom_general.py`.
 
@@ -101,15 +109,15 @@ Details of the parameters for each function can be found in the notebook `Genera
 The basic procedure to run specialized C+GDROM models (*Flood Control Model* & *Irrigation Model*) are consistent with those of *General Model*. The only difference is that specialized models require release module calibration using limited in-situ operation records (>= 2 years of daily inflow, release, and storage). We assume that the operation records from 2008 to 2009 are available for module calibration, and provide the calibrated module parameters in `fc_parameters_cali0809.csv` (for 127 flood control-dominated reservoirs) and `irr_parameters_cali0809.csv` (for 64 flood irrigation-dominated reservoirs). Model implementation based on pre-calibrated module parameters, and model calibration procedure using 2-year operation data, are specificed in the Jupyter notebooks `Flood_Control_Model_demo.ipynb` and `Irrigation_Model_demo.ipynb`.
 
 Core functions of *Flood Control Model* are defined in the script `cgdrom_fc.py`, including: 
-* fc_module_calibration(): returning the calibrated release module parameters in *Flood Control Model* based on the provided operation records
-* predict_fc_daily(): returning the predicted release decision and end-of-day storage using *Flood Control Model* for a day
-* predict_fc_series(): returning the predicted release and storage series using *Flood Control Model* for multiple days (given inflow series of studied period)
+* `fc_module_calibration()`: returning the calibrated release module parameters in *Flood Control Model* based on the provided operation records
+* `predict_fc_daily()`: returning the predicted release decision and end-of-day storage using *Flood Control Model* for a day
+* `predict_fc_series()`: returning the predicted release and storage series using *Flood Control Model* for multiple days (given inflow series of studied period)
 
 Core functions of *Irrigation Model* are defined in the script `cgdrom_irr.py`, including: 
-* module_trans_doys(): returning three critical DOYs associated with module transition in *Irrigation Model*
-* irr_module_calibration(): returning the calibrated release module parameters in *Irrigation Model* based on the provided operation records
-* predict_irr_daily(): returning the predicted release decision and end-of-day storage using *Irrigation Model* for a day
-* predict_irr_series(): returning the predicted release and storage series using *Irrigation Model* for multiple days (given inflow series of studied period)
+* `module_trans_doys()`: returning three critical DOYs associated with module transition in *Irrigation Model*
+* `irr_module_calibration()`: returning the calibrated release module parameters in *Irrigation Model* based on the provided operation records
+* `predict_irr_daily()`: returning the predicted release decision and end-of-day storage using *Irrigation Model* for a day
+* `predict_irr_series()`: returning the predicted release and storage series using *Irrigation Model* for multiple days (given inflow series of studied period)
 
 For details on the parameters used in each function, please refer to the notebooks and source code.
 
@@ -127,7 +135,7 @@ If you have any questions or would like to contribute, please contact Yanan Chen
 
 
 ## References
-- Chen, Y., Zheng, Y., Cai, X., Bin Y., and Zheng, Z. (under revision). [A Hybrid Empirical and Conceptual Model for Improving the Representation of Reservoirs with Limited Data in Hydrological Models], *Water Resources Research*.
+- Chen, Y., Zheng, Y., Cai, X., Bin Y., and Zheng, Z. (under review). [A Hybrid Empirical and Conceptual Model for Improving the Representation of Reservoirs with Limited Data in Hydrological Models], *Water Resources Research*.
 - Chen, Y., Cai, X., and Li, D. (2025). [Historical Operation Data of 256 Reservoirs in Contiguous United States], *HydroShare*, https://www.hydroshare.org/resource/092720588e2e4524bf2674235ff69d81.
 
 
